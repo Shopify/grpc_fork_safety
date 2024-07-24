@@ -16,6 +16,8 @@ gem "some-gem-that-depend-on-grpc"
 
 There isn't anything particular to do, the gem will hook itself into Ruby and properly call the GRPC fork hooks when needed.
 
+### `keep_disabled!`
+
 However, when a process will need to fork repeatedly and won't need to use GRPC, you can optimize by calling `GrpcForkSafety.keep_disabled!`.
 `grpc` will be enabled again in child process, but stay shutdown in the current process. This is useful for the main process of Puma or Unicorn
 and for the mold process of Pitchfork, e.g.
@@ -27,6 +29,24 @@ end
 ```
 
 If for some reason you need to undo this, you can call `GrpcForkSafety.reenable!`
+
+### Hooks
+
+You can also register hooks to be called before GRPC is disabled and after it's re-enabled:
+
+```ruby
+GrpcForkSafety.before_disable do
+  ThreadPool.shutdown
+end
+
+GrpcForkSafety.after_enable do |in_child|
+  unless in_child
+    ThreadPool.start
+  end
+end
+```
+
+Typically if you have background threads using GRPC, you should make sure to shut them down in `before_disable`.
 
 ## Development
 

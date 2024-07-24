@@ -137,5 +137,70 @@ module GrpcForkSafety
       assert_equal %i[prefork postfork_parent], @grpc.events
       refute_predicate @lifecycle, :keep_disabled?
     end
+
+    def test_before_disable_hook
+      called = 0
+      @lifecycle.before_disable { called += 1 }
+
+      @lifecycle.before_fork
+      assert_equal 1, called
+
+      @lifecycle.before_fork
+      assert_equal 1, called
+    end
+
+    def test_after_enable_hook_parent
+      called_in_parent = 0
+      called_in_child = 0
+      @lifecycle.after_enable do |in_child|
+        if in_child
+          called_in_child += 1
+        else
+          called_in_parent += 1
+        end
+      end
+
+      assert_equal [0, 0], [called_in_parent, called_in_child]
+
+      @lifecycle.after_fork
+      assert_equal [0, 0], [called_in_parent, called_in_child]
+
+      @lifecycle.before_fork
+      assert_equal [0, 0], [called_in_parent, called_in_child]
+
+      @lifecycle.after_fork
+      assert_equal [1, 0], [called_in_parent, called_in_child]
+
+      @lifecycle.after_fork
+      assert_equal [1, 0], [called_in_parent, called_in_child]
+    end
+
+    def test_after_enable_hook_child
+      called_in_parent = 0
+      called_in_child = 0
+      @lifecycle.after_enable do |in_child|
+        if in_child
+          called_in_child += 1
+        else
+          called_in_parent += 1
+        end
+      end
+
+      assert_equal [0, 0], [called_in_parent, called_in_child]
+
+      @lifecycle.after_fork
+      assert_equal [0, 0], [called_in_parent, called_in_child]
+
+      @lifecycle.before_fork
+      assert_equal [0, 0], [called_in_parent, called_in_child]
+
+      @process.pid += 1
+
+      @lifecycle.after_fork
+      assert_equal [0, 1], [called_in_parent, called_in_child]
+
+      @lifecycle.after_fork
+      assert_equal [0, 1], [called_in_parent, called_in_child]
+    end
   end
 end

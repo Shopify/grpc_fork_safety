@@ -5,9 +5,9 @@ require "grpc_fork_safety/no_patch"
 module GrpcForkSafety
   module ProcessExtension
     def _fork
-      GrpcForkSafety.before_fork_hook
+      GrpcForkSafety._before_fork_hook
       pid = super
-      GrpcForkSafety.after_fork_hook
+      GrpcForkSafety._after_fork_hook
       pid
     end
   end
