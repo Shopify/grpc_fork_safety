@@ -113,8 +113,7 @@ module GrpcForkSafety
     end
 
     def reenable!
-      @lifecycle.keep_disabled = false
-      @lifecycle.after_fork
+      @lifecycle.reenable!
     end
 
     def before_disable(&)
