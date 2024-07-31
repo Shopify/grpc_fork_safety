@@ -116,6 +116,16 @@ module GrpcForkSafety
 
       @lifecycle.after_fork
       assert_equal %i[prefork postfork_child], @grpc.events
+
+      @lifecycle.keep_disabled!
+      assert_equal %i[prefork postfork_child prefork], @grpc.events
+
+      @process.pid += 1
+      @lifecycle.after_fork
+      assert_equal %i[prefork postfork_child prefork postfork_child], @grpc.events
+
+      @lifecycle.keep_disabled!
+      assert_equal %i[prefork postfork_child prefork postfork_child prefork], @grpc.events
     end
 
     def test_parent_process_reenable
@@ -135,6 +145,14 @@ module GrpcForkSafety
       @lifecycle.reenable!
 
       assert_equal %i[prefork postfork_parent], @grpc.events
+      refute_predicate @lifecycle, :keep_disabled?
+
+      @lifecycle.before_fork
+      @process.pid += 1
+      @lifecycle.after_fork
+      @lifecycle.reenable!
+
+      assert_equal %i[prefork postfork_parent prefork postfork_child], @grpc.events
       refute_predicate @lifecycle, :keep_disabled?
     end
 

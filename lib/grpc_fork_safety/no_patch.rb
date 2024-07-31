@@ -28,8 +28,6 @@ module GrpcForkSafety
     end
 
     def keep_disabled!
-      return if @keep_disabled
-
       @keep_disabled = true
       before_fork
     end
@@ -39,8 +37,6 @@ module GrpcForkSafety
     end
 
     def reenable!
-      return unless @keep_disabled
-
       @keep_disabled = false
       after_fork
     end
