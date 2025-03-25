@@ -11,6 +11,7 @@ module GrpcForkSafety
       @process = process
       @shutdown_by = nil
       @keep_disabled = false
+      @reenable_in_child = true
       @before_disable = []
       @after_enable = []
     end
@@ -27,8 +28,9 @@ module GrpcForkSafety
       @after_enable << block
     end
 
-    def keep_disabled!
+    def keep_disabled!(reenable_in_child: true)
       @keep_disabled = true
+      @reenable_in_child = reenable_in_child
       before_fork
     end
 
@@ -36,8 +38,13 @@ module GrpcForkSafety
       @keep_disabled
     end
 
+    def reenable_in_child?
+      @reenable_in_child
+    end
+
     def reenable!
       @keep_disabled = false
+      @reenable_in_child = true
       after_fork
     end
 
@@ -62,7 +69,7 @@ module GrpcForkSafety
             cb.call(false)
           end
         end
-      else
+      elsif @reenable_in_child
         @keep_disabled = false
         @shutdown_by = nil
         @grpc.postfork_child
@@ -76,10 +83,12 @@ module GrpcForkSafety
   class NoopLifeCycle
     def initialize
       @keep_disabled = false
+      @reenable_in_child = true
     end
 
-    def keep_disabled!
+    def keep_disabled!(reenable_in_child: true)
       @keep_disabled = true
+      @reenable_in_child = reenable_in_child
     end
 
     def keep_disabled?
@@ -108,8 +117,8 @@ module GrpcForkSafety
                end
 
   class << self
-    def keep_disabled!
-      @lifecycle.keep_disabled!
+    def keep_disabled!(reenable_in_child: true)
+      @lifecycle.keep_disabled!(reenable_in_child: reenable_in_child)
     end
 
     def reenable!

@@ -30,6 +30,16 @@ end
 
 If for some reason you need to undo this, you can call `GrpcForkSafety.reenable!`
 
+Additionally, you can ask to keep GRPC disabled until `GrpcForkSafety.reenable!` is called explictly.
+This can be useful when using [Pitchfork](https://github.com/Shopify/pitchfork) reforking or similar, as to
+keep GRPC disabled in the mold.
+
+```ruby
+before_fork do
+  GrpcForkSafety.keep_disabled!(reenable_in_child: false)
+end
+```
+
 ### Hooks
 
 You can also register hooks to be called before GRPC is disabled and after it's re-enabled:

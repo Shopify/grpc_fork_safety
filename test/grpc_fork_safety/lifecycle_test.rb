@@ -220,5 +220,39 @@ module GrpcForkSafety
       @lifecycle.after_fork
       assert_equal [0, 1], [called_in_parent, called_in_child]
     end
+
+    def test_keep_disabled_in_child
+      @lifecycle.keep_disabled!(reenable_in_child: false)
+      assert_equal [:prefork], @grpc.events
+
+      @lifecycle.before_fork # Repeated call is a noop
+      assert_equal [:prefork], @grpc.events
+
+      @lifecycle.after_fork
+      assert_equal %i[prefork], @grpc.events
+
+      @lifecycle.after_fork
+      assert_equal %i[prefork], @grpc.events
+      assert_predicate @lifecycle, :keep_disabled?
+
+      @process.pid += 1
+
+      @lifecycle.after_fork
+      assert_equal %i[prefork], @grpc.events
+      assert_predicate @lifecycle, :keep_disabled?
+
+      @lifecycle.after_fork
+      assert_equal %i[prefork], @grpc.events
+
+      @process.pid += 1
+      @lifecycle.after_fork
+      assert_equal %i[prefork], @grpc.events
+
+      @lifecycle.reenable!
+      assert_equal %i[prefork postfork_child], @grpc.events
+
+      @lifecycle.keep_disabled!(reenable_in_child: false)
+      assert_equal %i[prefork postfork_child prefork], @grpc.events
+    end
   end
 end
