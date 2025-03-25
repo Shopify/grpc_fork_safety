@@ -9,6 +9,9 @@ Style/StringLiterals:
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
 
+Style/HashSyntax:
+  Enabled: false
+
 Style/Documentation:
   Enabled: false
 
@@ -25,4 +28,10 @@ Metrics/AbcSize:
   Enabled: false
 
 Metrics/ClassLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
   Enabled: false
