@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "grpc_fork_safety/init"
+require_relative "init"
 
 module GrpcForkSafety
   Error = Class.new(StandardError)

@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
-require "grpc_fork_safety/patch"
+require_relative "grpc_fork_safety/patch"
 
 GrpcForkSafety.patch!

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "grpc_fork_safety/no_patch"
+require_relative "no_patch"
 
 module GrpcForkSafety
   module ProcessExtension
