@@ -4,13 +4,67 @@ require_relative "init"
 
 module GrpcForkSafety
   Error = Class.new(StandardError)
+  DEPRECATED_KEEP_DISABLED_MESSAGE =
+    "DEPRECATION WARNING: `keep_disabled!` is deprecated. " \
+    "Use `disable!(reenable_in_children: true)`."
+  DEPRECATED_KEEP_DISABLED_PREDICATE_MESSAGE =
+    "DEPRECATION WARNING: `keep_disabled?` is deprecated and may be removed in a future major release."
 
-  class LifeCycle
+  class BaseLifeCycle
+    def initialize
+      # Default behavior (without calling disable!) is to automatically
+      # disable at fork and then reenable in both parent and children.
+      @reenable_in_parent = true
+      @reenable_in_children = true
+    end
+
+    def disable!(reenable_in_children: false)
+      @reenable_in_parent = false
+      @reenable_in_children = reenable_in_children
+      before_fork
+    end
+
+    # Deprecated method that disabled in the parent but reenabled in children.
+    def keep_disabled!
+      warn_deprecated_keep_disabled!
+      disable!(reenable_in_children: true)
+    end
+
+    # Deprecated method originally paired with keep_disabled!.
+    def keep_disabled?
+      warn_deprecated_keep_disabled_predicate!
+      !@reenable_in_parent
+    end
+
+    def reenable!
+      @reenable_in_parent = true
+      @reenable_in_children = true
+      after_fork
+    end
+
+    private
+
+    def warn_deprecated_keep_disabled!
+      return if @keep_disabled_warned
+
+      warn DEPRECATED_KEEP_DISABLED_MESSAGE
+      @keep_disabled_warned = true
+    end
+
+    def warn_deprecated_keep_disabled_predicate!
+      return if @keep_disabled_predicate_warned
+
+      warn DEPRECATED_KEEP_DISABLED_PREDICATE_MESSAGE
+      @keep_disabled_predicate_warned = true
+    end
+  end
+
+  class LifeCycle < BaseLifeCycle
     def initialize(grpc = ::GRPC, process = ::Process)
+      super()
       @grpc = grpc
       @process = process
       @shutdown_by = nil
-      @keep_disabled = false
       @before_disable = []
       @after_enable = []
     end
@@ -27,20 +81,6 @@ module GrpcForkSafety
       @after_enable << block
     end
 
-    def keep_disabled!
-      @keep_disabled = true
-      before_fork
-    end
-
-    def keep_disabled?
-      @keep_disabled
-    end
-
-    def reenable!
-      @keep_disabled = false
-      after_fork
-    end
-
     def before_fork
       return if @shutdown_by
 
@@ -54,7 +94,7 @@ module GrpcForkSafety
       if @shutdown_by.nil?
         # noop
       elsif @shutdown_by == @process.pid # In parent
-        unless @keep_disabled
+        if @reenable_in_parent
           @grpc.postfork_parent
           @shutdown_by = nil
 
@@ -62,8 +102,7 @@ module GrpcForkSafety
             cb.call(false)
           end
         end
-      else
-        @keep_disabled = false
+      elsif @reenable_in_children
         @shutdown_by = nil
         @grpc.postfork_child
         @after_enable.each do |cb|
@@ -73,29 +112,10 @@ module GrpcForkSafety
     end
   end
 
-  class NoopLifeCycle
-    def initialize
-      @keep_disabled = false
-    end
-
-    def keep_disabled!
-      @keep_disabled = true
-    end
-
-    def keep_disabled?
-      @keep_disabled
-    end
-
-    def reenable!
-      @keep_disabled = false
-    end
-
+  class NoopLifeCycle < BaseLifeCycle
     def before_fork; end
-
     def after_fork; end
-
     def before_disable; end
-
     def after_enable; end
   end
 
@@ -108,6 +128,10 @@ module GrpcForkSafety
                end
 
   class << self
+    def disable!(reenable_in_children: false)
+      @lifecycle.disable!(reenable_in_children:)
+    end
+
     def keep_disabled!
       @lifecycle.keep_disabled!
     end

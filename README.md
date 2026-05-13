@@ -16,19 +16,41 @@ gem "some-gem-that-depend-on-grpc"
 
 There isn't anything particular to do, the gem will hook itself into Ruby and properly call the GRPC fork hooks when needed.
 
-### `keep_disabled!`
+### `disable!(reenable_in_children:)`
 
-However, when a process will need to fork repeatedly and won't need to use GRPC, you can optimize by calling `GrpcForkSafety.keep_disabled!`.
-`grpc` will be enabled again in child process, but stay shutdown in the current process. This is useful for the main process of Puma or Unicorn
-and for the mold process of Pitchfork, e.g.
+Use `GrpcForkSafety.disable!(reenable_in_children: true)` when the current process should remain
+disabled, but children should automatically re-enable grpc after the fork.
 
 ```ruby
 before_fork do
-  GrpcForkSafety.keep_disabled!
+  GrpcForkSafety.disable!(reenable_in_children: true)
 end
 ```
 
-If for some reason you need to undo this, you can call `GrpcForkSafety.reenable!`
+### `disable!` and `reenable!`
+
+Use `GrpcForkSafety.disable!` to disable grpc and keep it disabled
+until `GrpcForkSafety.reenable!` is called explicitly.
+
+```ruby
+before_fork do
+  # In the parent process.
+  GrpcForkSafety.disable!
+end
+```
+
+Then in the descendant process that should use grpc:
+
+```ruby
+after_fork do
+  # In (grand)child processes once they are ready to continue operation.
+  GrpcForkSafety.reenable!
+end
+```
+
+### Deprecated aliases
+
+- `GrpcForkSafety.keep_disabled!` → `GrpcForkSafety.disable!(reenable_in_children: true)`
 
 ### Hooks
 
