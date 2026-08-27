@@ -9,6 +9,7 @@ Gem::Specification.new do |spec|
   spec.email = ["jean.boussier@gmail.com"]
 
   spec.summary = "Simple gems to facilitate making the grpc gem fork safe"
+  spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1.0" # When `Process._fork` was added
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
